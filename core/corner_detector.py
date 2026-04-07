@@ -4,13 +4,19 @@ import numpy as np
 
 def corner_detector(input_img, k = 0.04, window_size = 5, threshold = 3500.00,lambda_minus_flag = False):
     corner_list = []
-    output_img = cv2.cvtColor(input_img.copy(), cv2.COLOR_GRAY2RGB)
+
+    if len(input_img.shape) == 3:
+        gray_img = cv2.cvtColor(input_img, cv2.COLOR_BGR2GRAY)
+    else:
+        gray_img = input_img.copy()
+    output_img = cv2.cvtColor(gray_img, cv2.COLOR_GRAY2RGB)
 
     offset = int(window_size / 2)
-    y_range = input_img.shape[0] - offset
-    x_range = input_img.shape[1] - offset
+    y_range = gray_img.shape[0] - offset
+    x_range = gray_img.shape[1] - offset
 
-    dy, dx = np.gradient(input_img)
+    dy, dx = np.gradient(gray_img.astype(float))
+
     Ixx = dx ** 2
     Ixy = dy * dx
     Iyy = dy ** 2

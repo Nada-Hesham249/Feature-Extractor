@@ -88,7 +88,6 @@ class Ui_MainWindow(object):
         self.lblMatchUsing = self.centralwidget.findChild(type(self.centralwidget), "lblMatchUsing")
 
         self.harrisThreshold = self.centralwidget.findChild(type(self.centralwidget), "harrisThreshold")
-        self.harrisSigma = self.centralwidget.findChild(type(self.centralwidget), "harrisSigma")
         self.harrisWindow = self.centralwidget.findChild(type(self.centralwidget), "harrisWindow")
         self.lam_min_check = self.centralwidget.findChild(type(self.centralwidget), "lam_min_check")
         self.siftSigma = self.centralwidget.findChild(type(self.centralwidget), "siftSigma")
@@ -108,8 +107,8 @@ class Ui_MainWindow(object):
         QMetaObject.connectSlotsByName(MainWindow)
 
     def _wire_signals(self, MainWindow):
-        self.actionOpen_Image.triggered.connect(self._upload_original_image)
-        self.btnUploadOriginal.clicked.connect(self.actionOpen_Image.trigger)
+        # self.actionOpen_Image.triggered.connect(self._upload_original_image)
+        # self.btnUploadOriginal.clicked.connect(self.actionOpen_Image.trigger)
         self.btnReset.clicked.connect(self._reset_view_labels)
         self.comboMode.currentIndexChanged.connect(self._sync_mode_widgets)
         if self.btnUploadMatchImage1 is not None:
