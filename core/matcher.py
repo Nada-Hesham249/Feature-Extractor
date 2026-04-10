@@ -1,23 +1,22 @@
 import numpy as np
 import time
+import cv2
 
-# -------------------------------------------
-# 1) SSD Distance (Sum of Squared Differences)
-# -------------------------------------------
+from core.SIFT import (
+    build_gaussian_pyramid,
+    build_dog_pyramid,
+    detect_keypoints,
+    extract_descriptors,
+)
+
+
+# SSD
 def ssd_distance(desc1, desc2):
-    """
-    Compute SSD distance between two descriptors.
-    """
     return np.sum((desc1 - desc2) ** 2)
 
-# -------------------------------------------
-# 2) NCC (Normalized Cross Correlation)
-# -------------------------------------------
+
+# NCC
 def ncc_distance(desc1, desc2):
-    """
-    Compute distance based on 1 - NCC.
-    Higher NCC means better match → Smaller distance.
-    """
     d1 = desc1 - np.mean(desc1)
     d2 = desc2 - np.mean(desc2)
 
@@ -26,18 +25,10 @@ def ncc_distance(desc1, desc2):
 
     return 1 - ncc
 
-# ------------------------------------------------
-# 3) Match descriptors using SSD (Brute Force)
-# ------------------------------------------------
-def match_descriptors_ssd(descs1, descs2, threshold=float('inf'), max_matches=None):
-    """
-    For each descriptor in image1, find best match in image2 using SSD.
-    Optional:
-        threshold = ignore matches with score > threshold
-        max_matches = limit number of matches returned
-    """
+
+# SSD matching
+def match_descriptors_ssd(descs1, descs2):
     matches = []
-    start = time.time()
 
     for i, d1 in enumerate(descs1):
         best_j = None
@@ -49,28 +40,14 @@ def match_descriptors_ssd(descs1, descs2, threshold=float('inf'), max_matches=No
                 best_score = score
                 best_j = j
 
-        if best_score <= threshold:
-            matches.append((i, best_j, best_score))
+        matches.append((i, best_j, best_score))
 
-    matches = sorted(matches, key=lambda x: x[2])
-    if max_matches is not None:
-        matches = matches[:max_matches]
+    return matches, 0.0
 
-    elapsed = time.time() - start
-    return matches, elapsed
 
-# ------------------------------------------------
-# 4) Match descriptors using NCC (Brute Force)
-# ------------------------------------------------
-def match_descriptors_ncc(descs1, descs2, threshold=float('inf'), max_matches=None):
-    """
-    For each descriptor in image1, find best match in image2 using NCC.
-    Optional:
-        threshold = ignore matches with score > threshold
-        max_matches = limit number of matches returned
-    """
+# NCC matching
+def match_descriptors_ncc(descs1, descs2):
     matches = []
-    start = time.time()
 
     for i, d1 in enumerate(descs1):
         best_j = None
@@ -82,26 +59,56 @@ def match_descriptors_ncc(descs1, descs2, threshold=float('inf'), max_matches=No
                 best_score = score
                 best_j = j
 
-        if best_score <= threshold:
-            matches.append((i, best_j, best_score))
+        matches.append((i, best_j, best_score))
 
+    return matches, 0.0
+
+# -------------------------------------------
+# Helper: SIFT Pipeline
+# -------------------------------------------
+def compute_sift_descriptors(image):
+    """
+    Full SIFT pipeline (CORE responsibility)
+    """
+    if image is None:
+        return np.empty((0, 128), dtype=np.float32), []
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY).astype(np.float32) / 255.0
+
+    gaussian_pyramid = build_gaussian_pyramid(gray)
+    dog_pyramid = build_dog_pyramid(gaussian_pyramid)
+
+    keypoints = detect_keypoints(dog_pyramid)
+    descriptors, valid_keypoints, _ = extract_descriptors(keypoints, gaussian_pyramid)
+
+    return descriptors, valid_keypoints
+
+
+# -------------------------------------------
+# Full Matching Pipeline
+# -------------------------------------------
+def run_matching_pipeline(img1, img2, method="ssd"):
+    """
+    Returns:
+        matches, keypoints1, keypoints2, elapsed_time
+    """
+
+    start = time.time()
+
+    descs1, kp1 = compute_sift_descriptors(img1)
+    descs2, kp2 = compute_sift_descriptors(img2)
+
+    if descs1.size == 0 or descs2.size == 0:
+        return [], kp1, kp2, 0.0
+
+    if method == "ssd":
+        matches, _ = match_descriptors_ssd(descs1, descs2)
+    else:
+        matches, _ = match_descriptors_ncc(descs1, descs2)
+
+    # sorting (CORE responsibility)
     matches = sorted(matches, key=lambda x: x[2])
-    if max_matches is not None:
-        matches = matches[:max_matches]
 
     elapsed = time.time() - start
-    return matches, elapsed
 
-# ------------------------------------------------
-# 5) Full Matching Pipeline with Threshold & Max Matches
-# ------------------------------------------------
-def match_feature_sets(descs1, descs2, threshold=float('inf'), max_matches=None):
-    """
-    Perform SSD and NCC matching with optional threshold and max matches.
-    Returns:
-        ssd_matches, ncc_matches, ssd_time, ncc_time
-    """
-    ssd_matches, ssd_time = match_descriptors_ssd(descs1, descs2, threshold, max_matches)
-    ncc_matches, ncc_time = match_descriptors_ncc(descs1, descs2, threshold, max_matches)
-
-    return ssd_matches, ncc_matches, ssd_time, ncc_time
+    return matches, kp1, kp2, elapsed
