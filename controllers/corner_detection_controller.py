@@ -27,13 +27,13 @@ class CornerDetectionController:
         harris_window = self.ui.harrisWindow.value()
         lambda_minus_flag = self.ui.lam_min_check.isChecked()
 
-        scaled_threshold = harris_threshold * 10000
-        print(harris_threshold)
+        # scaled_threshold = harris_threshold * 10000
+        # print(scaled_threshold)
         # Apply Corner Detection
         _,corners = corner_detector(self.model.original_image,
                                     # harris_sigma,
                                     window_size = harris_window,
-                                    threshold = scaled_threshold,
+                                    threshold = harris_threshold,
                                     lambda_minus_flag = lambda_minus_flag
                                     )
 

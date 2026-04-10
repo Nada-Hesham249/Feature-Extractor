@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def corner_detector(input_img, k = 0.04, window_size = 5, threshold = 3500.00,lambda_minus_flag = False):
+def corner_detector(input_img, k = 0.04, window_size = 5, threshold = 0.01,lambda_minus_flag = False):
     corner_list = []
 
     if len(input_img.shape) == 3:
@@ -20,6 +20,8 @@ def corner_detector(input_img, k = 0.04, window_size = 5, threshold = 3500.00,la
     Ixx = dx ** 2
     Ixy = dy * dx
     Iyy = dy ** 2
+
+    response_map = np.zeros_like(gray_img, dtype=float)
 
     for y in range(offset, y_range):
         for x in range(offset, x_range):
@@ -56,9 +58,23 @@ def corner_detector(input_img, k = 0.04, window_size = 5, threshold = 3500.00,la
             else:#Harris
                 
                 r = det - k * (trace ** 2)
-                
-            if r > threshold:
-                corner_list.append([x, y, r])
-                output_img[y, x] = (0, 0, 255)
 
+
+            response_map[y, x] = r
+
+    max_response = response_map.max()
+    dynamic_threshold = threshold* max_response
+
+    # Non-Maximum Suppression step
+    for y in range(offset, y_range):
+        for x in range(offset, x_range):
+            r = response_map[y, x]
+
+            if r > dynamic_threshold:
+
+                neighborhood = response_map[y - 1: y + 2, x - 1: x + 2]
+
+                if r == neighborhood.max():
+                    corner_list.append([x, y, r])
+                    cv2.circle(output_img, (x, y), radius=3, color=(0, 0, 255), thickness=-1)
     return corner_list, output_img
