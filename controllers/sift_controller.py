@@ -17,10 +17,15 @@ class SIFTController:
             return
 
         octaves = int(self.ui.siftOctaves.value())
+        show_orientation = bool(
+            getattr(self.ui, "siftShowOrientation", None)
+            and self.ui.siftShowOrientation.isChecked()
+        )
 
         keypoints, output_img, elapsed_time = run_sift_pipeline(
             self.model.original_image,
             num_octaves=octaves,
+            show_orientation=show_orientation,
         )
 
         self.model.processed_image = output_img

@@ -56,6 +56,19 @@ class MatchingController:
         scale = 2 ** octave
         return int(j * scale), int(i * scale)
 
+    def _match_color(self, index):
+        palette = [
+            (0, 255, 0),
+            (0, 255, 255),
+            (255, 0, 0),
+            (255, 0, 255),
+            (0, 128, 255),
+            (255, 255, 0),
+            (0, 165, 255),
+            (255, 128, 0),
+        ]
+        return palette[index % len(palette)]
+
     def _draw_matches(self, img1, img2, keypoints1, keypoints2, matches):
         threshold_value = self.ui.matchThreshold.value()
         matches = [m for m in matches if m[2] <= threshold_value]
@@ -68,15 +81,16 @@ class MatchingController:
         output[:h1, :w1] = img1
         output[:h2, w1:w1 + w2] = img2
 
-        for match in draw_matches:
+        for index, match in enumerate(draw_matches):
             i, j, _ = match
             if i is None or j is None:
                 continue
+            color = self._match_color(index)
             pt1 = self._to_image_point(keypoints1[i])
             pt2 = self._to_image_point(keypoints2[j])
-            cv2.circle(output, (pt1[0], pt1[1]), 3, (0, 255, 0), -1)
-            cv2.circle(output, (pt2[0] + w1, pt2[1]), 3, (0, 255, 0), -1)
-            cv2.line(output, (pt1[0], pt1[1]), (pt2[0] + w1, pt2[1]), (255, 0, 0), 1)
+            cv2.circle(output, (pt1[0], pt1[1]), 3, color, -1)
+            cv2.circle(output, (pt2[0] + w1, pt2[1]), 3, color, -1)
+            cv2.line(output, (pt1[0], pt1[1]), (pt2[0] + w1, pt2[1]), color, 2)
         return output
 
     def _run_matching(self, method):
@@ -84,14 +98,13 @@ class MatchingController:
         if img1 is None or img2 is None:
             return
 
+        start_time = time()
         descs1, keypoints1 = self._compute_descriptors(img1)
         descs2, keypoints2 = self._compute_descriptors(img2)
 
         if descs1.size == 0 or descs2.size == 0:
             self.ui.statusbar.showMessage("Could not extract descriptors from one or both images.", 3000)
             return
-
-        start_time = time()
 
         if method == "ssd":
             matches, _ = match_descriptors_ssd(descs1, descs2)
@@ -112,7 +125,7 @@ class MatchingController:
             )
 
         elapsed = time() - start_time
-        self.ui.lblTimeValueMatch.setText(f"{elapsed:.3f} S")
+        self.ui.lblTimeValueSingle.setText(f"{elapsed:.3f} S")
         self.ui.statusbar.showMessage(f"Matching completed using {method.upper()}.", 3000)
 
         if not matches:
